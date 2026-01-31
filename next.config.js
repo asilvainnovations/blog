@@ -3,8 +3,8 @@ const nextConfig = {
   reactStrictMode: true,
 
   // ---------------------------------------------------------------------------
-  // Image optimization
-  // remotePatterns replaces the deprecated "domains" key.
+  // Image optimisation
+  // remotePatterns replaces the long-deprecated "domains" key.
   // asilvainnovations.com is included so Next can proxy the official logo.
   // ---------------------------------------------------------------------------
   images: {
@@ -27,8 +27,13 @@ const nextConfig = {
     ],
     formats: ['image/avif', 'image/webp'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
-    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    imageSizes:  [16, 32, 48, 64, 96, 128, 256, 384],
   },
+
+  // ---------------------------------------------------------------------------
+  // Tree-shake lucide icons — graduated from experimental to stable in Next 15
+  // ---------------------------------------------------------------------------
+  optimizePackageImports: ['lucide-react'],
 
   // ---------------------------------------------------------------------------
   // Security & performance headers
@@ -38,13 +43,13 @@ const nextConfig = {
       {
         source: '/:path*',
         headers: [
-          { key: 'X-DNS-Prefetch-Control',  value: 'on' },
+          { key: 'X-DNS-Prefetch-Control',    value: 'on' },
           { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
-          { key: 'X-Frame-Options',          value: 'SAMEORIGIN' },
-          { key: 'X-Content-Type-Options',   value: 'nosniff' },
-          { key: 'X-XSS-Protection',         value: '1; mode=block' },
-          { key: 'Referrer-Policy',          value: 'origin-when-cross-origin' },
-          { key: 'Permissions-Policy',       value: 'camera=(), microphone=(), geolocation=()' },
+          { key: 'X-Frame-Options',           value: 'SAMEORIGIN' },
+          { key: 'X-Content-Type-Options',    value: 'nosniff' },
+          { key: 'X-XSS-Protection',          value: '1; mode=block' },
+          { key: 'Referrer-Policy',           value: 'origin-when-cross-origin' },
+          { key: 'Permissions-Policy',        value: 'camera=(), microphone=(), geolocation=()' },
         ],
       },
     ];
@@ -61,7 +66,7 @@ const nextConfig = {
 
   // ---------------------------------------------------------------------------
   // API proxy rewrites — only wired when the env var is set so a fresh deploy
-  // without a backend doesn't try to forward to a non-existent origin.
+  // without a back-end doesn't forward to a non-existent origin.
   // ---------------------------------------------------------------------------
   async rewrites() {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL;
@@ -73,7 +78,7 @@ const nextConfig = {
   },
 
   // ---------------------------------------------------------------------------
-  // Webpack tweaks
+  // Webpack tweaks (client-side only)
   // ---------------------------------------------------------------------------
   webpack: (config, { isServer }) => {
     if (!isServer) {
@@ -88,18 +93,11 @@ const nextConfig = {
   },
 
   // ---------------------------------------------------------------------------
-  // Environment variables available at build time
+  // Build-time environment variables
   // ---------------------------------------------------------------------------
   env: {
     SITE_NAME: 'ASilva Innovations Blog',
     SITE_URL:  process.env.NEXT_PUBLIC_SITE_URL || 'https://asilva-innovations.com',
-  },
-
-  // ---------------------------------------------------------------------------
-  // Experimental — only tree-shake lucide icons; CSS optimisation left to Vercel
-  // ---------------------------------------------------------------------------
-  experimental: {
-    optimizePackageImports: ['lucide-react'],
   },
 };
 
