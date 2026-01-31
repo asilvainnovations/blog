@@ -655,7 +655,11 @@ const ASilvaBlogPlatform = () => {
       <nav className="navbar">
         <div className="navbar-brand">
           <div className="logo-container">
-            <div className="logo-icon">AS</div>
+            <img
+              src="https://asilvainnovations.com/assets/apps/user_1097/app_13212/draft/icon/app_logo.png?1769853277"
+              alt="ASilva Innovations"
+              className="logo-icon"
+            />
             <div className="logo-text">
               <div className="logo-title">ASilva Innovations</div>
               <div className="logo-subtitle">Content Management</div>
@@ -851,15 +855,9 @@ const styles = `
   .logo-icon {
     width: 44px;
     height: 44px;
-    background: var(--gradient-1);
     border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-weight: 700;
-    font-size: 18px;
-    letter-spacing: -0.5px;
+    object-fit: cover;
+    display: block;
   }
 
   .logo-text {
