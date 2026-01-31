@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![ASilva Innovations](https://via.placeholder.com/800x200/667eea/ffffff?text=ASilva+Innovations+Blog+Platform)
+![ASilva Innovations](https://appimize.app/assets/apps/user_1097/images/2c7d825bf937_232_1097.png)
 
 **A Production-Ready, Standards-Compliant Content Management System**
 
