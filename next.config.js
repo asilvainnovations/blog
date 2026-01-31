@@ -1,11 +1,21 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  swcMinify: true,
-  
-  // Image optimization
+
+  // Image optimization — remotePatterns replaces the deprecated domains key
   images: {
-    domains: ['images.unsplash.com', 'your-cdn-domain.com'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.cloudinary.com',
+        pathname: '/**',
+      },
+    ],
     formats: ['image/avif', 'image/webp'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
@@ -61,12 +71,15 @@ const nextConfig = {
     ];
   },
   
-  // Rewrites for API routes
+  // Rewrites for API routes — only active when the target URL is configured
   async rewrites() {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (!apiUrl) return [];
+
     return [
       {
         source: '/api/:path*',
-        destination: 'https://api.asilva-innovations.com/:path*',
+        destination: `${apiUrl}/:path*`,
       },
     ];
   },
@@ -93,7 +106,6 @@ const nextConfig = {
   
   // Experimental features
   experimental: {
-    optimizeCss: true,
     optimizePackageImports: ['lucide-react'],
   },
 };
