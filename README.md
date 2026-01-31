@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![ASilva Innovations](https://appimize.app/assets/apps/user_1097/images/2c7d825bf937_232_1097.png)
+![ASilva Innovations]([https://asilvainnovations.com/assets/apps/user_1097/app_13212/draft/icon/app_logo.png?1769853277])
 
 **A Production-Ready, Standards-Compliant Content Management System**
 
