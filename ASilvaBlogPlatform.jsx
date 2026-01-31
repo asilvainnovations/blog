@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Camera, Plus, Eye, Edit3, Trash2, Save, X, Calendar, Tag, Share2, Search, Menu, Sun, Moon, Users, BarChart3, Mail, Settings, Image as ImageIcon, Video, Code, Link as LinkIcon, Bold, Italic, List, AlignLeft, ChevronDown, Upload, AlertCircle, Check, TrendingUp, FileText, Layout, Zap } from 'lucide-react';
 
 // Utility function for class names
