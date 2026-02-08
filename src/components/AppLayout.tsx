@@ -10,11 +10,13 @@ import NewsletterModal from './NewsletterModal';
 import AuthModal from './AuthModal';
 import BookmarksPage from './BookmarksPage';
 import Footer from './Footer';
+import AdminDashboard from './admin/AdminDashboard'; // Integrated Admin Dashboard
 import { useArticles, useArticle } from '@/hooks/useArticles';
 import { useAuth } from '@/contexts/AuthContext';
 import { Category } from '@/types';
 
-type ViewType = 'home' | 'article' | 'editor' | 'analytics' | 'bookmarks' | 'settings';
+// Updated ViewType to include 'admin'
+type ViewType = 'home' | 'article' | 'editor' | 'analytics' | 'bookmarks' | 'settings' | 'admin';
 
 export default function AppLayout() {
   const [currentView, setCurrentView] = useState<ViewType>('home');
@@ -89,7 +91,8 @@ export default function AppLayout() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
-  const handleNavigate = useCallback((view: 'home' | 'editor' | 'analytics' | 'bookmarks' | 'settings') => {
+  // Updated navigation handler to support 'admin' view
+  const handleNavigate = useCallback((view: ViewType) => {
     setCurrentView(view);
     setSelectedArticleSlug(null);
     if (view === 'home') {
@@ -245,6 +248,9 @@ export default function AppLayout() {
 
       case 'analytics':
         return <Analytics />;
+
+      case 'admin': // Render the new AdminDashboard
+        return <AdminDashboard />;
 
       case 'bookmarks':
         return <BookmarksPage onArticleClick={handleArticleClick} />;
@@ -448,7 +454,7 @@ export default function AppLayout() {
       </main>
 
       {/* Footer */}
-      {currentView !== 'article' && (
+      {currentView !== 'article' && currentView !== 'admin' && ( // Hide footer on admin view
         <Footer
           onCategorySelect={handleCategorySelect}
           onNewsletterOpen={() => setShowNewsletter(true)}
