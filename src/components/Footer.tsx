@@ -60,8 +60,7 @@ export default function Footer({ onCategorySelect, onNewsletterOpen }: FooterPro
           <div className="lg:col-span-2">
             <div className="flex items-center gap-3 mb-6">
               <img 
-                src="https://asilvainnovations.com/assets/apps/user_1097/app_13212/draft/icon/app_logo.png?1769949231" 
-                alt="ASilva Innovations" 
+                src="https://appimize.app/assets/apps/user_1097/images/2c7d825bf937_232_1097.png" alt="ASilva Innovations Logo" 
                 className="h-12 w-12 object-contain"
               />
               <div>
@@ -77,11 +76,11 @@ export default function Footer({ onCategorySelect, onNewsletterOpen }: FooterPro
             <div className="space-y-3 text-gray-400">
               <a href="mailto:contact@asilvainnovations.com" className="flex items-center gap-3 hover:text-white transition-colors">
                 <Mail className="w-5 h-5" />
-                contact@asilvainnovations.com
+                info@asilvainnovations.com
               </a>
               <a href="tel:+1234567890" className="flex items-center gap-3 hover:text-white transition-colors">
                 <Phone className="w-5 h-5" />
-                +1 (234) 567-890
+                +63 (917) 855 5134
               </a>
               <a href="https://asilvainnovations.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 hover:text-white transition-colors">
                 <Globe className="w-5 h-5" />
