@@ -5,10 +5,11 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { Article, Category } from '@/types';
+import { Article, Category, Profile } from '@/types';
 import { cn } from '@/lib/utils';
 
-type ArticleStatus = 'draft' | 'published' | 'scheduled' | 'deleted';
+// ✅ CORRECTED: Removed 'deleted' status (hard delete only)
+type ArticleStatus = 'draft' | 'published' | 'scheduled';
 type SortOption = 'newest' | 'oldest' | 'title' | 'views';
 
 interface ArticleFilters {
@@ -19,6 +20,15 @@ interface ArticleFilters {
   sort?: SortOption;
 }
 
+// ✅ Helper: Get Edge Function URL from env
+const getEdgeFunctionUrl = (path: string = ''): string => {
+  const baseUrl = import.meta.env.VITE_SUPABASE_URL || import.meta.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!baseUrl) {
+    throw new Error('Missing SUPABASE_URL environment variable');
+  }
+  return `${baseUrl.replace(/\/+$/, '')}/functions/v1/article-management${path ? `/${path}` : ''}`;
+};
+
 export default function ArticleManagement() {
   const { user, profile } = useAuth();
   const [articles, setArticles] = useState<Article[]>([]);
@@ -27,30 +37,52 @@ export default function ArticleManagement() {
     status: undefined,
     sort: 'newest'
   });
-  const [selectedArticles, setSelectedArticles] = useState<Set<string>>(new Set());
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [articleToDelete, setArticleToDelete] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchArticles();
-  }, [filters]);
+  }, [filters, profile?.id]); // ✅ Re-fetch when profile changes
 
   const fetchArticles = async () => {
     setLoading(true);
+    setError(null);
     try {
+      // ✅ Use Supabase client directly (no Edge Function needed for reads)
       let query = supabase
         .from('articles')
         .select(`
           *,
-          author:profiles(id, full_name, avatar_url, role)
-        `);
+          author:profiles!articles_author_id_fkey(
+            id, 
+            full_name, 
+            avatar_url, 
+            role,
+            username
+          )
+        `)
+        .eq('author_id', profile?.id); // ✅ Default to user's own articles
+
+      // Admins/editors see all articles
+      if (profile?.role === 'admin' || profile?.role === 'editor') {
+        query = supabase
+          .from('articles')
+          .select(`
+            *,
+            author:profiles!articles_author_id_fkey(
+              id, 
+              full_name, 
+              avatar_url, 
+              role,
+              username
+            )
+          `);
+      }
 
       // Apply filters
       if (filters.status) {
         query = query.eq('status', filters.status);
-      } else {
-        // Don't show deleted articles by default
-        query = query.neq('status', 'deleted');
       }
 
       if (filters.category) {
@@ -80,72 +112,67 @@ export default function ArticleManagement() {
           query = query.order('created_at', { ascending: false });
       }
 
-      const { data, error } = await query;
+      const { data, error: fetchError } = await query;
 
-      if (error) throw error;
-
-      setArticles(data || []);
-    } catch (error) {
-      console.error('Error fetching articles:', error);
+      if (fetchError) throw fetchError;
+      setArticles(data?.map(a => ({
+        ...a,
+        // ✅ Handle missing author gracefully
+        author: a.author || { id: a.author_id, full_name: 'Unknown Author', role: 'contributor' } as Profile
+      })) || []);
+    } catch (err) {
+      console.error('Error fetching articles:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load articles');
     } finally {
       setLoading(false);
     }
   };
 
+  // ✅ CORRECTED: Use Edge Function with proper URL and auth
   const handleDelete = async (articleId: string) => {
     try {
-      const response = await fetch('/api/article-management', {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Not authenticated');
+      }
+
+      const response = await fetch(`${getEdgeFunctionUrl()}?id=${encodeURIComponent(articleId)}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ id: articleId }),
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+        }
       });
 
       if (!response.ok) {
-        throw new Error('Failed to delete article');
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
       }
 
-      // Refresh articles
-      fetchArticles();
+      // ✅ Optimistic update
+      setArticles(prev => prev.filter(a => a.id !== articleId));
       setShowDeleteConfirm(false);
       setArticleToDelete(null);
-    } catch (error) {
-      console.error('Error deleting article:', error);
-      alert('Failed to delete article');
+    } catch (err) {
+      console.error('Delete error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to delete article');
+      alert(`Deletion failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
   };
 
-  const handleBulkAction = async (action: 'publish' | 'draft' | 'delete') => {
-    // Implementation for bulk actions
-    console.log('Bulk action:', action, 'for articles:', Array.from(selectedArticles));
-    // TODO: Implement bulk operations
-  };
-
-  const toggleArticleSelection = (articleId: string) => {
-    const newSelection = new Set(selectedArticles);
-    if (newSelection.has(articleId)) {
-      newSelection.delete(articleId);
-    } else {
-      newSelection.add(articleId);
-    }
-    setSelectedArticles(newSelection);
-  };
-
+  // ✅ CORRECTED: Removed 'deleted' status from badge
   const getStatusBadge = (status: ArticleStatus) => {
     const styles = {
       published: 'bg-green-100 text-green-700',
       draft: 'bg-yellow-100 text-yellow-700',
-      scheduled: 'bg-blue-100 text-blue-700',
-      deleted: 'bg-red-100 text-red-700',
+      scheduled: 'bg-blue-100 text-blue-700'
     };
 
     const icons = {
       published: <CheckCircle className="w-3 h-3" />,
       draft: <Edit className="w-3 h-3" />,
-      scheduled: <Clock className="w-3 h-3" />,
-      deleted: <XCircle className="w-3 h-3" />,
+      scheduled: <Clock className="w-3 h-3" />
     };
 
     return (
@@ -156,9 +183,11 @@ export default function ArticleManagement() {
     );
   };
 
+  // ✅ CORRECTED: Permission checks aligned with RBAC
   const canEditArticle = (article: Article) => {
-    if (profile?.role === 'admin' || profile?.role === 'editor') return true;
-    if (profile?.role === 'author' && article.author_id === user?.id) return true;
+    if (!profile || !user) return false;
+    if (profile.role === 'admin' || profile.role === 'editor') return true;
+    if (profile.role === 'author' && article.author_id === user.id) return true;
     return false;
   };
 
@@ -166,25 +195,58 @@ export default function ArticleManagement() {
     return profile?.role === 'admin';
   };
 
+  const canPublishArticle = () => {
+    return ['admin', 'editor', 'author'].includes(profile?.role || '');
+  };
+
+  // ✅ Helper: Format date with time
+  const formatDate = (dateString: string) => {
+    try {
+      return new Date(dateString).toLocaleString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return 'Invalid date';
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Article Management</h2>
-          <p className="text-gray-600">Create, edit, and manage your blog content</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Article Management</h1>
+          <p className="text-gray-600 mt-1">Create, edit, and manage your content</p>
         </div>
         <button
-          onClick={() => window.location.href = '/admin/articles/new'}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          onClick={() => window.location.href = '/editor'}
+          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm min-w-[140px]"
         >
           <Plus className="w-5 h-5" />
-          New Article
+          <span>New Article</span>
         </button>
       </div>
 
+      {/* Error Banner */}
+      {error && (
+        <div className="p-4 bg-red-50 text-red-700 rounded-lg flex items-center gap-2">
+          <AlertCircle className="w-5 h-5 flex-shrink-0" />
+          <span>{error}</span>
+          <button 
+            onClick={() => setError(null)} 
+            className="ml-auto text-red-600 hover:text-red-800 font-medium"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       {/* Filters & Search */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4">
+      <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {/* Search */}
           <div className="md:col-span-2">
@@ -192,35 +254,39 @@ export default function ArticleManagement() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search articles..."
+                placeholder="Search articles by title or excerpt..."
                 value={filters.search || ''}
                 onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                aria-label="Search articles"
               />
             </div>
           </div>
 
           {/* Status Filter */}
           <div>
+            <label htmlFor="status-filter" className="sr-only">Status</label>
             <select
+              id="status-filter"
               value={filters.status || ''}
               onChange={(e) => setFilters({ ...filters, status: e.target.value as ArticleStatus || undefined })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value="">All Status</option>
+              <option value="">All Statuses</option>
               <option value="published">Published</option>
               <option value="draft">Draft</option>
               <option value="scheduled">Scheduled</option>
-              <option value="deleted">Deleted</option>
             </select>
           </div>
 
           {/* Sort */}
           <div>
+            <label htmlFor="sort-filter" className="sr-only">Sort</label>
             <select
+              id="sort-filter"
               value={filters.sort || 'newest'}
               onChange={(e) => setFilters({ ...filters, sort: e.target.value as SortOption })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="newest">Newest First</option>
               <option value="oldest">Oldest First</option>
@@ -229,37 +295,6 @@ export default function ArticleManagement() {
             </select>
           </div>
         </div>
-
-        {/* Bulk Actions */}
-        {selectedArticles.size > 0 && (
-          <div className="mt-4 flex items-center gap-4 p-3 bg-blue-50 rounded-lg">
-            <span className="text-sm font-medium text-blue-900">
-              {selectedArticles.size} article{selectedArticles.size > 1 ? 's' : ''} selected
-            </span>
-            <div className="flex gap-2">
-              <button
-                onClick={() => handleBulkAction('publish')}
-                className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors"
-              >
-                Publish
-              </button>
-              <button
-                onClick={() => handleBulkAction('draft')}
-                className="px-3 py-1 bg-yellow-600 text-white text-sm rounded hover:bg-yellow-700 transition-colors"
-              >
-                Draft
-              </button>
-              {canDeleteArticle() && (
-                <button
-                  onClick={() => handleBulkAction('delete')}
-                  className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition-colors"
-                >
-                  Delete
-                </button>
-              )}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Articles Table */}
@@ -267,119 +302,142 @@ export default function ArticleManagement() {
         {loading ? (
           <div className="p-12 text-center text-gray-500">
             <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
-            Loading articles...
+            <p className="text-lg font-medium">Loading articles...</p>
           </div>
         ) : articles.length === 0 ? (
           <div className="p-12 text-center text-gray-500">
-            <AlertCircle className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-            <p>No articles found</p>
+            <div className="mx-auto w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4">
+              <AlertCircle className="w-8 h-8 text-blue-400" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-1">No articles found</h3>
+            <p className="text-gray-600 max-w-md mx-auto">
+              {filters.search || filters.status || filters.category 
+                ? "Try adjusting your filters to see more results" 
+                : "Create your first article to get started"}
+            </p>
+            <button
+              onClick={() => window.location.href = '/editor'}
+              className="mt-6 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Create New Article
+            </button>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="min-w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-4 py-3 text-left">
-                    <input
-                      type="checkbox"
-                      checked={selectedArticles.size === articles.length && articles.length > 0}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedArticles(new Set(articles.map(a => a.id)));
-                        } else {
-                          setSelectedArticles(new Set());
-                        }
-                      }}
-                      className="rounded border-gray-300"
-                    />
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Title</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Author</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Category</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Views</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Date</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Actions</th>
+                  <th scope="col" className="px-4 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Title</th>
+                  <th scope="col" className="px-4 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider hidden md:table-cell">Author</th>
+                  <th scope="col" className="px-4 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider hidden lg:table-cell">Category</th>
+                  <th scope="col" className="px-4 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                  <th scope="col" className="px-4 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider hidden sm:table-cell">Views</th>
+                  <th scope="col" className="px-4 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider hidden md:table-cell">Created</th>
+                  <th scope="col" className="px-4 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {articles.map((article) => (
-                  <tr key={article.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-4">
-                      <input
-                        type="checkbox"
-                        checked={selectedArticles.has(article.id)}
-                        onChange={() => toggleArticleSelection(article.id)}
-                        className="rounded border-gray-300"
-                      />
-                    </td>
+                  <tr 
+                    key={article.id} 
+                    className="hover:bg-gray-50 transition-colors"
+                  >
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-3">
                         {article.featured_image && (
                           <img
                             src={article.featured_image}
                             alt=""
-                            className="w-12 h-12 rounded object-cover"
+                            className="w-14 h-14 rounded object-cover flex-shrink-0 border border-gray-200"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = 'https://appimize.app/assets/apps/user_1097/images/2c7d825bf937_232_1097.png';
+                            }}
                           />
                         )}
-                        <div>
-                          <p className="font-medium text-gray-900">{article.title}</p>
-                          <p className="text-sm text-gray-500 line-clamp-1">{article.excerpt}</p>
+                        <div className="min-w-0">
+                          <p className="font-medium text-gray-900 truncate">{article.title}</p>
+                          <p className="text-sm text-gray-500 line-clamp-1 mt-0.5">{article.excerpt}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-4">
+                    <td className="px-4 py-4 hidden md:table-cell">
                       <div className="flex items-center gap-2">
-                        {article.author?.avatar_url && (
+                        {article.author?.avatar_url ? (
                           <img
                             src={article.author.avatar_url}
-                            alt=""
-                            className="w-6 h-6 rounded-full"
+                            alt={article.author.full_name || 'Author'}
+                            className="w-7 h-7 rounded-full border border-gray-200"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = 'https://appimize.app/assets/apps/user_1097/images/2c7d825bf937_232_1097.png';
+                            }}
                           />
+                        ) : (
+                          <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-medium text-xs border border-blue-200">
+                            {article.author?.full_name?.charAt(0) || article.author?.username?.charAt(0) || '?'}
+                          </div>
                         )}
-                        <span className="text-sm text-gray-700">{article.author?.full_name}</span>
+                        <span className="text-sm font-medium text-gray-900">
+                          {article.author?.full_name || article.author?.username || 'Unknown'}
+                        </span>
                       </div>
                     </td>
-                    <td className="px-4 py-4">
-                      <span className="text-sm text-gray-600">{article.category}</span>
+                    <td className="px-4 py-4 hidden lg:table-cell">
+                      <span className={cn(
+                        'px-2.5 py-0.5 rounded-full text-xs font-medium',
+                        article.category === 'AI and Analytics' ? 'bg-coral-100 text-coral-700' :
+                        article.category === 'Systems Innovations' ? 'bg-blue-100 text-blue-700' :
+                        article.category === 'Integrated Risk Management' ? 'bg-amber-100 text-amber-700' :
+                        article.category === 'Resilience' ? 'bg-green-100 text-green-700' :
+                        'bg-teal-100 text-teal-700'
+                      )}>
+                        {article.category}
+                      </span>
                     </td>
                     <td className="px-4 py-4">
                       {getStatusBadge(article.status as ArticleStatus)}
-                    </td>
-                    <td className="px-4 py-4">
-                      <div className="flex items-center gap-1 text-sm text-gray-600">
-                        <Eye className="w-4 h-4" />
-                        {article.views || 0}
-                      </div>
-                    </td>
-                    <td className="px-4 py-4">
-                      <div className="text-sm text-gray-600">
-                        {new Date(article.created_at).toLocaleDateString()}
-                      </div>
-                      {article.scheduled_publish_at && (
-                        <div className="flex items-center gap-1 text-xs text-blue-600 mt-1">
+                      {article.scheduled_publish_at && article.status === 'scheduled' && (
+                        <div className="mt-1 flex items-center gap-1 text-[11px] text-blue-600">
                           <Calendar className="w-3 h-3" />
-                          {new Date(article.scheduled_publish_at).toLocaleDateString()}
+                          {formatDate(article.scheduled_publish_at)}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-4 hidden sm:table-cell">
+                      <div className="flex items-center gap-1.5 text-sm text-gray-700 font-medium">
+                        <Eye className="w-4 h-4 text-gray-400" />
+                        {(article.views || 0).toLocaleString()}
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 hidden md:table-cell">
+                      <div className="text-sm text-gray-600">
+                        {formatDate(article.created_at)}
+                      </div>
+                      {article.updated_at !== article.created_at && (
+                        <div className="text-[11px] text-gray-400 mt-0.5">
+                          Updated: {new Date(article.updated_at).toLocaleDateString()}
                         </div>
                       )}
                     </td>
                     <td className="px-4 py-4">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5">
                         {canEditArticle(article) && (
                           <button
-                            onClick={() => window.location.href = `/admin/articles/edit/${article.id}`}
-                            className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-                            title="Edit"
+                            onClick={() => window.location.href = `/editor?id=${article.id}`}
+                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Edit article"
+                            aria-label={`Edit ${article.title}`}
                           >
-                            <Edit className="w-4 h-4" />
+                            <Edit className="w-4.5 h-4.5" />
                           </button>
                         )}
                         <button
-                          onClick={() => window.open(`/articles/${article.slug}`, '_blank')}
-                          className="p-1 text-gray-600 hover:bg-gray-100 rounded"
-                          title="View"
+                          onClick={() => window.open(`/articles/${article.slug}`, '_blank', 'noopener,noreferrer')}
+                          className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                          title="View live article"
+                          aria-label={`View ${article.title}`}
                         >
-                          <Eye className="w-4 h-4" />
+                          <Eye className="w-4.5 h-4.5" />
                         </button>
                         {canDeleteArticle() && (
                           <button
@@ -387,10 +445,11 @@ export default function ArticleManagement() {
                               setArticleToDelete(article.id);
                               setShowDeleteConfirm(true);
                             }}
-                            className="p-1 text-red-600 hover:bg-red-50 rounded"
-                            title="Delete"
+                            className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Delete article"
+                            aria-label={`Delete ${article.title}`}
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-4.5 h-4.5" />
                           </button>
                         )}
                       </div>
@@ -405,27 +464,37 @@ export default function ArticleManagement() {
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-bold text-gray-900 mb-2">Delete Article</h3>
-            <p className="text-gray-600 mb-6">
-              Are you sure you want to delete this article? This action cannot be undone.
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowDeleteConfirm(false)}
+        >
+          <div 
+            className="bg-white rounded-2xl p-6 max-w-md w-full mx-auto shadow-xl"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Trash2 className="w-6 h-6 text-red-600" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 text-center mb-2">Delete Article?</h3>
+            <p className="text-gray-600 text-center mb-6">
+              This action cannot be undone. The article will be permanently removed from the system.
             </p>
-            <div className="flex gap-3 justify-end">
+            <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={() => {
                   setShowDeleteConfirm(false);
                   setArticleToDelete(null);
                 }}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="px-4 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium"
               >
                 Cancel
               </button>
               <button
                 onClick={() => articleToDelete && handleDelete(articleToDelete)}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                className="px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center justify-center gap-2"
               >
-                Delete
+                <Trash2 className="w-4 h-4" />
+                Permanently Delete
               </button>
             </div>
           </div>
