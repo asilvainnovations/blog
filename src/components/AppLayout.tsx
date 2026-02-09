@@ -10,13 +10,11 @@ import NewsletterModal from './NewsletterModal';
 import AuthModal from './AuthModal';
 import BookmarksPage from './BookmarksPage';
 import Footer from './Footer';
-import AdminDashboard from './admin/AdminDashboard'; // Integrated Admin Dashboard
 import { useArticles, useArticle } from '@/hooks/useArticles';
 import { useAuth } from '@/contexts/AuthContext';
 import { Category } from '@/types';
 
-// Updated ViewType to include 'admin'
-type ViewType = 'home' | 'article' | 'editor' | 'analytics' | 'bookmarks' | 'settings' | 'admin';
+type ViewType = 'home' | 'article' | 'editor' | 'analytics' | 'bookmarks' | 'settings';
 
 export default function AppLayout() {
   const [currentView, setCurrentView] = useState<ViewType>('home');
@@ -26,15 +24,15 @@ export default function AppLayout() {
   const [showNewsletter, setShowNewsletter] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [hasShownNewsletter, setHasShownNewsletter] = useState(false);
-
+  
   const { user, profile, updateProfile } = useAuth();
 
   // Fetch articles
-  const { 
-    articles, 
-    loading, 
-    hasMore, 
-    loadMore 
+  const {
+    articles,
+    loading,
+    hasMore,
+    loadMore
   } = useArticles({
     category: selectedCategory,
     searchQuery,
@@ -91,7 +89,6 @@ export default function AppLayout() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
-  // Updated navigation handler to support 'admin' view
   const handleNavigate = useCallback((view: ViewType) => {
     setCurrentView(view);
     setSelectedArticleSlug(null);
@@ -120,7 +117,7 @@ export default function AppLayout() {
       const { error } = await updateProfile({
         full_name: fullName,
         newsletter_subscribed: newsletterSubscribed,
-        newsletter_frequency: newsletterFrequency as any,
+        newsletter_frequency: newsletterFrequency,
       });
       setSaving(false);
       if (!error) {
@@ -228,7 +225,7 @@ export default function AppLayout() {
         if (articleLoading) {
           return (
             <div className="min-h-screen flex items-center justify-center">
-              <div className="animate-spin w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full" />
+              <div className="text-gray-600">Loading article...</div>
             </div>
           );
         }
@@ -248,9 +245,6 @@ export default function AppLayout() {
 
       case 'analytics':
         return <Analytics />;
-
-      case 'admin': // Render the new AdminDashboard
-        return <AdminDashboard />;
 
       case 'bookmarks':
         return <BookmarksPage onArticleClick={handleArticleClick} />;
@@ -437,7 +431,7 @@ export default function AppLayout() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div>
       {/* Header */}
       <Header
         onSearch={handleSearch}
@@ -454,7 +448,7 @@ export default function AppLayout() {
       </main>
 
       {/* Footer */}
-      {currentView !== 'article' && currentView !== 'admin' && ( // Hide footer on admin view
+      {currentView !== 'article' && (
         <Footer
           onCategorySelect={handleCategorySelect}
           onNewsletterOpen={() => setShowNewsletter(true)}
