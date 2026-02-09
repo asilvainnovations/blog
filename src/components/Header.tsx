@@ -96,7 +96,7 @@ export default function Header({
             onClick={() => onNavigate('home')}
           >
             <img 
-              src="https://asilvainnovations.com/assets/apps/user_1097/app_13212/draft/icon/app_logo.png?1769949231" 
+              src="https://appimize.app/assets/apps/user_1097/images/2c7d825bf937_232_1097.png" 
               alt="ASilva Innovations" 
               className="h-10 w-10 object-contain"
             />
