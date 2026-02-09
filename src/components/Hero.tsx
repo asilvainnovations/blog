@@ -84,8 +84,7 @@ export default function Hero({ featuredArticles, onArticleClick }: HeroProps) {
         {/* Logo and Tagline */}
         <div className="text-center mb-12">
           <img 
-            src="https://asilvainnovations.com/assets/apps/user_1097/app_13212/draft/icon/app_logo.png?1769949231" 
-            alt="ASilva Innovations" 
+            src="https://appimize.app/assets/apps/user_1097/images/2c7d825bf937_232_1097.png"alt="ASilva Innovations" 
             className="h-16 w-16 mx-auto mb-6 drop-shadow-2xl"
           />
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-4 tracking-tight">
