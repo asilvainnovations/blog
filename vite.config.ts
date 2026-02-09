@@ -3,7 +3,6 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { visualizer } from "rollup-plugin-visualizer";
 
-// https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
@@ -11,14 +10,8 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react(),
-    splitVendorChunkPlugin(), // ✅ Auto-splits common vendor chunks
-    // Uncomment to analyze bundle after build:
-    // mode === 'production' && visualizer({ 
-    //   filename: 'stats.html', 
-    //   open: true,
-    //   gzipSize: true,
-    //   brotliSize: true 
-    // }),
+    splitVendorChunkPlugin(),
+    // Uncomment to analyze: mode === 'production' && visualizer({ filename: 'stats.html', open: true })
   ].filter(Boolean),
   resolve: {
     alias: {
@@ -28,63 +21,66 @@ export default defineConfig(({ mode }) => ({
   build: {
     rollupOptions: {
       output: {
-        // ✅ CIRCULAR DEPENDENCY FIX: Order matters! Most specific FIRST
+        // ✅ CRITICAL FIX: Combine React ecosystem to eliminate circular warnings
         manualChunks(id) {
-          // Skip non-node_modules imports
           if (!id.includes('node_modules')) return;
           
-          // 1. React DOM (MUST come before react-core)
-          if (id.includes('node_modules/react-dom')) return 'react-dom';
+          // 1. COMBINE React + ReactDOM (prevents circular dependency warnings)
+          if (/node_modules[\/\\](react|react-dom|react-router-dom)[\/\\]/.test(id)) {
+            return 'react-vendor';
+          }
           
-          // 2. React Core (MUST come before generic checks)
-          if (id.includes('node_modules/react')) return 'react-core';
+          // 2. Supabase client
+          if (/node_modules[\/\\]@supabase[\/\\]/.test(id)) {
+            return 'supabase-client';
+          }
           
-          // 3. Supabase client
-          if (id.includes('@supabase')) return 'supabase-client';
+          // 3. Rich text editors
+          if (/node_modules[\/\\](lexical|tiptap|draft-js|slate|prosemirror)[\/\\]/.test(id)) {
+            return 'rich-editor';
+          }
           
-          // 4. Rich text editors (add your actual editor)
-          if (/(lexical|tiptap|draft-js|slate|prosemirror)/.test(id)) return 'rich-editor';
+          // 4. UI libraries (Radix, Heroicons, etc)
+          if (/node_modules[\/\\](@radix-ui|@heroicons|lucide-react|shadcn)[\/\\]/.test(id)) {
+            return 'ui-components';
+          }
           
-          // 5. UI component libraries
-          if (/@(heroicons|radix-ui|headlessui|lucide-react|shadcn)/.test(id)) return 'ui-components';
+          // 5. Charts
+          if (/node_modules[\/\\](recharts|chart\.js|victory|apexcharts)[\/\\]/.test(id)) {
+            return 'charts';
+          }
           
-          // 6. Charts
-          if (/(recharts|chart\.js|victory|apexcharts)/.test(id)) return 'charts';
+          // 6. Utilities
+          if (/node_modules[\/\\](date-fns|dayjs)[\/\\]/.test(id)) {
+            return 'utils';
+          }
           
-          // 7. Utilities
-          if (/(lodash|date-fns|dayjs)/.test(id)) return 'utils';
-          
-          // 8. Catch remaining vendor deps (WILL NOT include React/Supabase/UI)
-          // Prevents: vendor -> react-core -> vendor circular reference
+          // 7. Catch remaining vendor deps (WILL NOT include above packages)
           return 'vendor';
         },
       },
     },
-    // ✅ MINIFICATION: Use Terser (installed via npm install -D terser)
     minify: 'terser',
     terserOptions: {
       compress: {
-        drop_console: mode === 'production', // Remove console.log in prod
+        drop_console: mode === 'production',
         drop_debugger: true,
         pure_funcs: ['console.log', 'console.debug'],
       },
-      format: {
-        comments: false, // Remove comments from minified code
-      },
+      format: { comments: false },
     },
-    // ✅ Chunk size limit (after optimization)
     chunkSizeWarningLimit: 700,
     reportCompressedSize: true,
     cssCodeSplit: true,
     sourcemap: mode === 'development',
   },
-  // ✅ ESBuild optimizations
   esbuild: {
     legalComments: 'none',
     pure: ['console.log', 'debugger'],
   },
-  // ✅ Optimize dependencies for faster dev server
   optimizeDeps: {
+    // ✅ FIX "Could not auto-determine entry point" warning
+    entries: ['./index.html'],
     include: [
       'react',
       'react-dom',
@@ -95,6 +91,5 @@ export default defineConfig(({ mode }) => ({
       'lucide-react',
       'date-fns',
     ],
-    exclude: [],
   },
 }));
