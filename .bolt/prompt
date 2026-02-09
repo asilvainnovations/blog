@@ -1,3 +1,32 @@
+Develop and design a production-ready Blog platfomr with the following essential features categorized by their role:
+1. Content Management & Writing Experience The "backend" should empower the writer to focus on content without fighting the technology.
+* WYSIWYG / Block Editor: A "What You See Is What You Get" editor (like WordPress Gutenberg) that allows for drag-and-drop layout building.
+* Multimedia Integration: Seamless embedding for high-resolution images, videos (YouTube/Vimeo), and social media posts.
+* Drafting & Scheduling: Robust version control (saving previous edits) and the ability to schedule posts for future dates/times.
+* Collaboration Tools: Support for multiple user roles (Administrator, Editor, Author, Contributor) with granular permissions.
+
+2. Technical SEO & Performance Best practices dictate that the platform should handle the "heavy lifting" of technical SEO automatically.
+* Fast Loading (Core Web Vitals): Built-in caching and lightweight code to ensure sub-second load times, which is a major Google ranking factor.
+* Automated XML Sitemaps: Automatic generation and updating of sitemaps to help search engines crawl your content.
+* Schema Markup (Structured Data): Built-in JSON-LD support to help your posts appear as "Rich Snippets" (with star ratings or FAQs) in search results.
+* Mobile-First Responsive Design: The platform must automatically adjust layouts for smartphones, as Google prioritizes mobile indexing.
+* Custom Slugs & Canonical Tags: The ability to edit URLs (e.g., /best-blog-features/ instead of /p=123) and set canonical tags to prevent duplicate content penalties.
+
+3. Reader Experience & Engagement Features that keep readers on the page and encourage them to return.
+* Advanced Taxonomy: Clear use of Categories (broad topics) and Tags (specific descriptors) to organize content.
+* Readability Optimization: Native support for "dark mode," adjustable font scales, and optimized line spacing (ideally 1.5x to 1.6x the font size).
+* Internal Linking Tools: Suggestions for related posts or easy-to-use search bars to decrease bounce rates.
+* Social Sharing & Open Graph: Built-in buttons for sharing and the ability to customize how a post looks (image and title) when shared on X, LinkedIn, or Facebook.
+
+4. Growth & Monetization A blog is a business tool; it needs features to capture and convert leads.
+* Native Newsletters: Integration with services like Substack, Beehiiv, or Mailchimp to turn "one-time" readers into subscribers.
+* Call-to-Action (CTA) Blocks: Dedicated, visually distinct sections for "Sign Up," "Buy Now," or "Download eBook."
+* Analytics Dashboard: Native tracking of page views, referral sources, and popular content (or easy integration with Google Analytics 4).
+* Security (SSL/HTTPS): An absolute requirement. The platformshould provide an SSL certificate to protect user data and maintain trust.
+
+
+Next Tasks:
+
 Create an admin dashboard for managing the blog platform. Include features for: 1) Article management (create, edit, delete, schedule publishing), 2) Comment moderation (approve, reject, spam filtering), 3) User management (view users, change roles between admin/editor/author/contributor), 4) Newsletter subscriber management, and 5) Content analytics with detailed metrics. Add role-based access control so only admins and editors can access the dashboard.
 
 Implement a complete draft management system for the blog. Add: 1) Auto-save functionality that saves drafts every 30 seconds while editing, 2) Version history showing all previous versions with timestamps and ability to restore any version, 3) Draft preview mode to see how the article will look when published, 4) Scheduled publishing with timezone support allowing authors to set a future publish date/time, and 5) A drafts list page showing all unpublished articles with their status.
