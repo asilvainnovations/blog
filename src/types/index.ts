@@ -1,18 +1,18 @@
-// Blog Platform Types
-
-export interface Author {
+export interface Profile {
   id: string;
-  name: string;
-  email: string;
-  avatar: string;
-  bio: string;
+  full_name: string | null;
+  avatar_url: string | null;
   role: 'admin' | 'editor' | 'author' | 'contributor';
+  bio: string | null;
   social_links: {
     linkedin?: string;
     twitter?: string;
     website?: string;
   };
+  newsletter_subscribed?: boolean;
+  newsletter_frequency?: 'daily' | 'weekly' | 'monthly';
   created_at: string;
+  updated_at: string;
 }
 
 export interface Article {
@@ -24,8 +24,8 @@ export interface Article {
   featured_image: string;
   category: Category;
   tags: string[];
-  author_id: string;
-  author?: Author;
+  author_id: string; // UUID referencing profiles.id
+  author?: Profile;   // Changed from Author to Profile
   status: 'draft' | 'published' | 'scheduled';
   published_at: string;
   scheduled_for?: string;
@@ -39,7 +39,7 @@ export interface Article {
   updated_at: string;
 }
 
-export type Category = 
+export type Category =
   | 'Systems Innovations'
   | 'Integrated Risk Management'
   | 'Resilience'
@@ -53,7 +53,7 @@ export interface ContentBlock {
   metadata?: Record<string, unknown>;
 }
 
-export type BlockType = 
+export type BlockType =
   | 'paragraph'
   | 'heading-2'
   | 'heading-3'
