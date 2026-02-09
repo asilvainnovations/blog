@@ -11,8 +11,8 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react(),
-    splitVendorChunkPlugin(), // ✅ Auto-splits large vendor chunks
-    // Uncomment to analyze bundle:
+    splitVendorChunkPlugin(), // ✅ Auto-splits common vendor chunks
+    // Uncomment to analyze bundle after build:
     // mode === 'production' && visualizer({ 
     //   filename: 'stats.html', 
     //   open: true,
@@ -28,68 +28,40 @@ export default defineConfig(({ mode }) => ({
   build: {
     rollupOptions: {
       output: {
-        // ✅ FIXED: Prevent circular dependencies
-        manualChunks(id, { getModuleInfo }) {
-          // Skip if not a node_modules import
-          if (!id.includes('node_modules')) {
-            return;
-          }
-
-          // Split React ecosystem
-          if (id.includes('node_modules/react-dom')) {
-            return 'react-dom';
-          }
-          if (id.includes('node_modules/react')) {
-            return 'react-core';
-          }
+        // ✅ CIRCULAR DEPENDENCY FIX: Order matters! Most specific FIRST
+        manualChunks(id) {
+          // Skip non-node_modules imports
+          if (!id.includes('node_modules')) return;
           
-          // Split Supabase
-          if (id.includes('@supabase')) {
-            return 'supabase-client';
-          }
+          // 1. React DOM (MUST come before react-core)
+          if (id.includes('node_modules/react-dom')) return 'react-dom';
           
-          // Split rich text editors
-          if (id.includes('lexical') || 
-              id.includes('draft-js') || 
-              id.includes('tiptap') ||
-              id.includes('prosemirror') ||
-              id.includes('slate')) {
-            return 'rich-editor';
-          }
+          // 2. React Core (MUST come before generic checks)
+          if (id.includes('node_modules/react')) return 'react-core';
           
-          // Split charts
-          if (id.includes('chart.js') || 
-              id.includes('recharts') || 
-              id.includes('victory') ||
-              id.includes('apexcharts')) {
-            return 'charts';
-          }
+          // 3. Supabase client
+          if (id.includes('@supabase')) return 'supabase-client';
           
-          // Split utilities
-          if (id.includes('lodash') || 
-              id.includes('date-fns') || 
-              id.includes('dayjs')) {
-            return 'utils';
-          }
+          // 4. Rich text editors (add your actual editor)
+          if (/(lexical|tiptap|draft-js|slate|prosemirror)/.test(id)) return 'rich-editor';
           
-          // Split UI components (icons, headlessui, etc)
-          if (id.includes('@heroicons') ||
-              id.includes('@radix-ui') ||
-              id.includes('@headlessui') ||
-              id.includes('lucide-react') ||
-              id.includes('shadcn')) {
-            return 'ui-components';
-          }
+          // 5. UI component libraries
+          if (/@(heroicons|radix-ui|headlessui|lucide-react|shadcn)/.test(id)) return 'ui-components';
           
-          // ✅ CRITICAL FIX: Don't create circular deps
-          // Group remaining vendor deps into 'vendor' chunk
-          // This prevents: vendor -> react-core -> vendor circular reference
+          // 6. Charts
+          if (/(recharts|chart\.js|victory|apexcharts)/.test(id)) return 'charts';
+          
+          // 7. Utilities
+          if (/(lodash|date-fns|dayjs)/.test(id)) return 'utils';
+          
+          // 8. Catch remaining vendor deps (WILL NOT include React/Supabase/UI)
+          // Prevents: vendor -> react-core -> vendor circular reference
           return 'vendor';
         },
       },
     },
-    // ✅ CRITICAL FIX: Enable Terser minification
-    minify: 'terser', // ← REQUIRED to use terserOptions below
+    // ✅ MINIFICATION: Use Terser (installed via npm install -D terser)
+    minify: 'terser',
     terserOptions: {
       compress: {
         drop_console: mode === 'production', // Remove console.log in prod
@@ -111,7 +83,7 @@ export default defineConfig(({ mode }) => ({
     legalComments: 'none',
     pure: ['console.log', 'debugger'],
   },
-  // ✅ Optimize dependencies
+  // ✅ Optimize dependencies for faster dev server
   optimizeDeps: {
     include: [
       'react',
@@ -121,6 +93,7 @@ export default defineConfig(({ mode }) => ({
       'clsx',
       'tailwind-merge',
       'lucide-react',
+      'date-fns',
     ],
     exclude: [],
   },
