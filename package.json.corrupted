@@ -3,14 +3,14 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "build:dev": "vite build --mode development",
-    "lint": "eslint .",
-    "preview": "vite preview"
-    "postinstall": "npm run verify-deps",
-    "verify-deps": "node -e \"require('terser')\" 2>/dev/null || npm install -D terser"
+"scripts": {
+  "dev": "vite",
+  "build": "vite build",
+  "build:dev": "vite build --mode development",
+  "lint": "eslint .",
+  "preview": "vite preview", 
+  "postinstall": "npm run verify-deps",
+  "verify-deps": "node -e \"require('terser')\" 2>/dev/null || npm install -D terser"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
