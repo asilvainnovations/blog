@@ -201,17 +201,16 @@
 }
 
 /* 🛡️ Security: Remove Platform Branding/Badges */
-  #bolt-badge, 
-  .bolt-badge,
-  [data-bolt-badge],
-  iframe[src*="bolt.new"] {
-    display: none !important;
-    visibility: hidden !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
-    height: 0 !important;
-    width: 0 !important;
-  }
+#bolt-badge, 
+.bolt-badge,
+[data-bolt-badge],
+iframe[src*="bolt.new"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  height: 0 !important;
+  width: 0 !important;
 }
 
 /* Focus styles for accessibility */
