@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Article, Author, Category } from '@/types';
+import { Article, Profile, Category } from '@/types';
 
 interface UseArticlesOptions {
   category?: Category | null;
@@ -35,7 +35,14 @@ export function useArticles(options: UseArticlesOptions = {}): UseArticlesReturn
         .from('articles')
         .select(`
           *,
-          author:authors(*)
+          author:profiles(
+            id,
+            full_name,
+            avatar_url,
+            role,
+            bio,
+            social_links
+          )
         `)
         .eq('status', 'published')
         .order('published_at', { ascending: false })
@@ -106,7 +113,14 @@ export function useArticle(slug: string) {
           .from('articles')
           .select(`
             *,
-            author:authors(*)
+            author:profiles(
+              id,
+              full_name,
+              avatar_url,
+              role,
+              bio,
+              social_links
+            )
           `)
           .eq('slug', slug)
           .single();
@@ -123,7 +137,6 @@ export function useArticle(slug: string) {
           .from('articles')
           .update({ views: (data.views || 0) + 1 })
           .eq('id', data.id);
-
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch article');
       } finally {
@@ -150,7 +163,12 @@ export function useRelatedArticles(articleId: string, category: Category, limit 
           .from('articles')
           .select(`
             *,
-            author:authors(*)
+            author:profiles(
+              id,
+              full_name,
+              avatar_url,
+              role
+            )
           `)
           .eq('status', 'published')
           .eq('category', category)
@@ -178,16 +196,16 @@ export function useRelatedArticles(articleId: string, category: Category, limit 
 }
 
 export function useAuthors() {
-  const [authors, setAuthors] = useState<Author[]>([]);
+  const [authors, setAuthors] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchAuthors() {
       try {
         const { data } = await supabase
-          .from('authors')
+          .from('profiles')
           .select('*')
-          .order('name');
+          .order('full_name');
 
         setAuthors(data || []);
       } catch (err) {
