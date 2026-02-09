@@ -12,7 +12,7 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     splitVendorChunkPlugin(), // ✅ Auto-splits large vendor chunks
-    // Uncomment below to analyze bundle composition after build
+    // Uncomment to analyze bundle:
     // mode === 'production' && visualizer({ 
     //   filename: 'stats.html', 
     //   open: true,
@@ -28,24 +28,27 @@ export default defineConfig(({ mode }) => ({
   build: {
     rollupOptions: {
       output: {
-        // ✅ Strategic manual chunking for heavy dependencies
-        manualChunks(id) {
-          // Split React ecosystem (core libraries)
+        // ✅ FIXED: Prevent circular dependencies
+        manualChunks(id, { getModuleInfo }) {
+          // Skip if not a node_modules import
+          if (!id.includes('node_modules')) {
+            return;
+          }
+
+          // Split React ecosystem
+          if (id.includes('node_modules/react-dom')) {
+            return 'react-dom';
+          }
           if (id.includes('node_modules/react')) {
             return 'react-core';
           }
           
-          // Split React DOM (separate from core)
-          if (id.includes('node_modules/react-dom')) {
-            return 'react-dom';
-          }
-          
-          // Split Supabase client (critical for auth/data)
+          // Split Supabase
           if (id.includes('@supabase')) {
             return 'supabase-client';
           }
           
-          // Split rich text editor libraries (likely heaviest component)
+          // Split rich text editors
           if (id.includes('lexical') || 
               id.includes('draft-js') || 
               id.includes('tiptap') ||
@@ -54,7 +57,7 @@ export default defineConfig(({ mode }) => ({
             return 'rich-editor';
           }
           
-          // Split charting libraries if used
+          // Split charts
           if (id.includes('chart.js') || 
               id.includes('recharts') || 
               id.includes('victory') ||
@@ -62,36 +65,31 @@ export default defineConfig(({ mode }) => ({
             return 'charts';
           }
           
-          // Split utility libraries
+          // Split utilities
           if (id.includes('lodash') || 
               id.includes('date-fns') || 
-              id.includes('dayjs') ||
-              id.includes('moment')) {
+              id.includes('dayjs')) {
             return 'utils';
           }
           
-          // Split UI component libraries
-          if (id.includes('node_modules/@heroicons') ||
-              id.includes('node_modules/@radix-ui') ||
-              id.includes('node_modules/@headlessui')) {
+          // Split UI components (icons, headlessui, etc)
+          if (id.includes('@heroicons') ||
+              id.includes('@radix-ui') ||
+              id.includes('@headlessui') ||
+              id.includes('lucide-react') ||
+              id.includes('shadcn')) {
             return 'ui-components';
           }
           
-          // Group other vendor dependencies
-          if (id.includes('node_modules')) {
-            return 'vendor';
-          }
+          // ✅ CRITICAL FIX: Don't create circular deps
+          // Group remaining vendor deps into 'vendor' chunk
+          // This prevents: vendor -> react-core -> vendor circular reference
+          return 'vendor';
         },
       },
     },
-    // ✅ Optimize chunk sizes and compression
-    chunkSizeWarningLimit: 700, // Increased after strategic splitting
-    reportCompressedSize: true,
-    minify: 'esbuild', // Fastest minification
-    target: 'esnext', // Modern browsers only
-    cssCodeSplit: true, // Split CSS into separate chunks
-    sourcemap: mode === 'development', // Only in dev
-    // ✅ Optimize Terser for better compression
+    // ✅ CRITICAL FIX: Enable Terser minification
+    minify: 'terser', // ← REQUIRED to use terserOptions below
     terserOptions: {
       compress: {
         drop_console: mode === 'production', // Remove console.log in prod
@@ -102,13 +100,18 @@ export default defineConfig(({ mode }) => ({
         comments: false, // Remove comments from minified code
       },
     },
+    // ✅ Chunk size limit (after optimization)
+    chunkSizeWarningLimit: 700,
+    reportCompressedSize: true,
+    cssCodeSplit: true,
+    sourcemap: mode === 'development',
   },
   // ✅ ESBuild optimizations
   esbuild: {
-    legalComments: 'none', // Remove legal comments for smaller bundles
-    pure: ['console.log', 'debugger'], // Remove debug code
+    legalComments: 'none',
+    pure: ['console.log', 'debugger'],
   },
-  // ✅ Optimize dependencies for faster dev server
+  // ✅ Optimize dependencies
   optimizeDeps: {
     include: [
       'react',
@@ -117,9 +120,8 @@ export default defineConfig(({ mode }) => ({
       '@supabase/supabase-js',
       'clsx',
       'tailwind-merge',
+      'lucide-react',
     ],
-    exclude: [
-      // Exclude heavy libraries that don't need pre-bundling
-    ],
+    exclude: [],
   },
 }));
