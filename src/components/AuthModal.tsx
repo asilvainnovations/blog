@@ -1,437 +1,333 @@
-import React, { useState } from 'react';
-import { X, Mail, Lock, User, Loader2, CheckCircle, AlertCircle, ArrowLeft } from 'lucide-react';
+import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Eye, EyeOff, Loader2, CheckCircle } from 'lucide-react';
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  initialView?: 'signin' | 'signup' | 'forgot-password';
+  defaultTab?: 'signin' | 'signup';
 }
 
-type AuthView = 'signin' | 'signup' | 'forgot-password' | 'check-email';
-
-export default function AuthModal({ isOpen, onClose, initialView = 'signin' }: AuthModalProps) {
-  const [view, setView] = useState<AuthView>(initialView);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [fullName, setFullName] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-
+export function AuthModal({ isOpen, onClose, defaultTab = 'signin' }: AuthModalProps) {
   const { signIn, signUp, resetPassword } = useAuth();
+  const [activeTab, setActiveTab] = useState(defaultTab);
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const resetForm = () => {
-    setEmail('');
-    setPassword('');
-    setConfirmPassword('');
-    setFullName('');
-    setError('');
-    setSuccess('');
-  };
-
-  const handleClose = () => {
-    resetForm();
-    setView('signin');
-    onClose();
-  };
+  // Form states
+  const [signInEmail, setSignInEmail] = useState('');
+  const [signInPassword, setSignInPassword] = useState('');
+  const [signUpName, setSignUpName] = useState('');
+  const [signUpEmail, setSignUpEmail] = useState('');
+  const [signUpPassword, setSignUpPassword] = useState('');
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError('');
+    setIsLoading(true);
+    setError(null);
 
-    const { error } = await signIn(email, password);
-    
+    const { error } = await signIn(signInEmail, signInPassword);
+
     if (error) {
-      setError(error.message);
+      setError(error);
     } else {
-      handleClose();
+      onClose();
     }
-    
-    setLoading(false);
+
+    setIsLoading(false);
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError('');
+    setIsLoading(true);
+    setError(null);
 
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      setLoading(false);
-      return;
-    }
+    const { error } = await signUp(signUpEmail, signUpPassword, signUpName);
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters');
-      setLoading(false);
-      return;
-    }
-
-    const { error } = await signUp(email, password, fullName);
-    
     if (error) {
-      setError(error.message);
+      setError(error);
     } else {
-      setView('check-email');
+      setSuccessMessage('Account created successfully! Please check your email to confirm your account.');
     }
-    
-    setLoading(false);
+
+    setIsLoading(false);
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError('');
+    setIsLoading(true);
+    setError(null);
 
-    const { error } = await resetPassword(email);
-    
+    const { error } = await resetPassword(forgotEmail);
+
     if (error) {
-      setError(error.message);
+      setError(error);
     } else {
-      setSuccess('Password reset email sent! Check your inbox.');
+      setSuccessMessage('Password reset instructions have been sent to your email.');
     }
-    
-    setLoading(false);
+
+    setIsLoading(false);
   };
 
-  if (!isOpen) return null;
+  const resetForm = () => {
+    setError(null);
+    setSuccessMessage(null);
+    setShowForgotPassword(false);
+    setSignInEmail('');
+    setSignInPassword('');
+    setSignUpName('');
+    setSignUpEmail('');
+    setSignUpPassword('');
+    setForgotEmail('');
+  };
+
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fadeIn"
-        onClick={handleClose}
-      />
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-center">
+            {showForgotPassword
+              ? 'Reset Password'
+              : activeTab === 'signin'
+              ? 'Welcome Back'
+              : 'Create Account'}
+          </DialogTitle>
+          <DialogDescription className="text-center">
+            {showForgotPassword
+              ? 'Enter your email to receive reset instructions'
+              : activeTab === 'signin'
+              ? 'Sign in to access your bookmarks and personalized content'
+              : 'Join our community of innovators and thought leaders'}
+          </DialogDescription>
+        </DialogHeader>
 
-      {/* Modal */}
-      <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-scaleIn">
-        {/* Close Button */}
-        <button
-          onClick={handleClose}
-          className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 transition-colors z-10"
-        >
-          <X className="w-5 h-5 text-gray-500" />
-        </button>
-
-        {/* Header */}
-        <div className="bg-gradient-to-br from-[#0A2463] via-[#0D3B66] to-[#00B4D8] p-8 text-center">
-          <img 
-            src="https://asilvainnovations.com/assets/apps/user_1097/app_13212/draft/icon/app_logo.png?1769949231" 
-            alt="ASilva Innovations" 
-            className="h-12 w-12 mx-auto mb-4"
-          />
-          <h2 className="text-2xl font-bold text-white">
-            {view === 'signin' && 'Welcome Back'}
-            {view === 'signup' && 'Create Account'}
-            {view === 'forgot-password' && 'Reset Password'}
-            {view === 'check-email' && 'Check Your Email'}
-          </h2>
-          <p className="text-white/80 mt-2">
-            {view === 'signin' && 'Sign in to access your bookmarks and preferences'}
-            {view === 'signup' && 'Join our community of thought leaders'}
-            {view === 'forgot-password' && 'We\'ll send you a reset link'}
-            {view === 'check-email' && 'We\'ve sent you a confirmation email'}
-          </p>
-        </div>
-
-        {/* Content */}
-        <div className="p-8">
-          {/* Check Email View */}
-          {view === 'check-email' && (
-            <div className="text-center">
-              <div className="w-16 h-16 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
-                <CheckCircle className="w-8 h-8 text-green-600" />
-              </div>
-              <p className="text-gray-600 mb-6">
-                We've sent a confirmation email to <strong>{email}</strong>. 
-                Please click the link in the email to verify your account.
-              </p>
-              <button
-                onClick={() => {
-                  resetForm();
-                  setView('signin');
-                }}
-                className="text-blue-600 hover:text-blue-700 font-medium"
-              >
-                Back to Sign In
-              </button>
+        {successMessage ? (
+          <Alert className="bg-green-50 border-green-200">
+            <CheckCircle className="h-4 w-4 text-green-600" />
+            <AlertDescription className="text-green-700">
+              {successMessage}
+            </AlertDescription>
+          </Alert>
+        ) : showForgotPassword ? (
+          <form onSubmit={handleForgotPassword} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="forgot-email">Email</Label>
+              <Input
+                id="forgot-email"
+                type="email"
+                placeholder="you@example.com"
+                value={forgotEmail}
+                onChange={(e) => setForgotEmail(e.target.value)}
+                required
+              />
             </div>
-          )}
 
-          {/* Sign In Form */}
-          {view === 'signin' && (
-            <form onSubmit={handleSignIn} className="space-y-4">
-              <div>
-                <label htmlFor="signin-email" className="block text-sm font-medium text-gray-700 mb-1">
-                  Email Address
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type="email"
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                'Send Reset Instructions'
+              )}
+            </Button>
+
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full"
+              onClick={() => setShowForgotPassword(false)}
+            >
+              Back to Sign In
+            </Button>
+          </form>
+        ) : (
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'signin' | 'signup')}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="signin">Sign In</TabsTrigger>
+              <TabsTrigger value="signup">Sign Up</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="signin" className="space-y-4">
+              <form onSubmit={handleSignIn} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="signin-email">Email</Label>
+                  <Input
                     id="signin-email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
+                    type="email"
                     placeholder="you@example.com"
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="signin-password" className="block text-sm font-medium text-gray-700 mb-1">
-                  Password
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type="password"
-                    id="signin-password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    value={signInEmail}
+                    onChange={(e) => setSignInEmail(e.target.value)}
                     required
-                    placeholder="Enter your password"
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
-              </div>
 
-              <div className="flex items-center justify-end">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setError('');
-                    setView('forgot-password');
-                  }}
-                  className="text-sm text-blue-600 hover:text-blue-700"
-                >
-                  Forgot password?
-                </button>
-              </div>
-
-              {error && (
-                <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                  {error}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="signin-password">Password</Label>
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="h-auto p-0 text-xs"
+                      onClick={() => setShowForgotPassword(true)}
+                    >
+                      Forgot password?
+                    </Button>
+                  </div>
+                  <div className="relative">
+                    <Input
+                      id="signin-password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      value={signInPassword}
+                      onChange={(e) => setSignInPassword(e.target.value)}
+                      required
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
-              )}
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-3 bg-gradient-to-r from-blue-600 to-teal-500 text-white font-semibold rounded-xl hover:shadow-lg hover:scale-[1.02] transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Signing in...
-                  </>
-                ) : (
-                  'Sign In'
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
                 )}
-              </button>
 
-              <p className="text-center text-gray-600 text-sm">
-                Don't have an account?{' '}
-                <button
-                  type="button"
-                  onClick={() => {
-                    resetForm();
-                    setView('signup');
-                  }}
-                  className="text-blue-600 hover:text-blue-700 font-medium"
-                >
-                  Sign up
-                </button>
-              </p>
-            </form>
-          )}
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Signing in...
+                    </>
+                  ) : (
+                    'Sign In'
+                  )}
+                </Button>
+              </form>
+            </TabsContent>
 
-          {/* Sign Up Form */}
-          {view === 'signup' && (
-            <form onSubmit={handleSignUp} className="space-y-4">
-              <div>
-                <label htmlFor="signup-name" className="block text-sm font-medium text-gray-700 mb-1">
-                  Full Name
-                </label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type="text"
+            <TabsContent value="signup" className="space-y-4">
+              <form onSubmit={handleSignUp} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="signup-name">Full Name</Label>
+                  <Input
                     id="signup-name"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    required
+                    type="text"
                     placeholder="John Doe"
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    value={signUpName}
+                    onChange={(e) => setSignUpName(e.target.value)}
+                    required
                   />
                 </div>
-              </div>
 
-              <div>
-                <label htmlFor="signup-email" className="block text-sm font-medium text-gray-700 mb-1">
-                  Email Address
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type="email"
+                <div className="space-y-2">
+                  <Label htmlFor="signup-email">Email</Label>
+                  <Input
                     id="signup-email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    placeholder="you@example.com"
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="signup-password" className="block text-sm font-medium text-gray-700 mb-1">
-                  Password
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type="password"
-                    id="signup-password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    minLength={6}
-                    placeholder="At least 6 characters"
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="signup-confirm" className="block text-sm font-medium text-gray-700 mb-1">
-                  Confirm Password
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type="password"
-                    id="signup-confirm"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                    placeholder="Confirm your password"
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
-
-              {error && (
-                <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                  {error}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-3 bg-gradient-to-r from-blue-600 to-teal-500 text-white font-semibold rounded-xl hover:shadow-lg hover:scale-[1.02] transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Creating account...
-                  </>
-                ) : (
-                  'Create Account'
-                )}
-              </button>
-
-              <p className="text-center text-gray-600 text-sm">
-                Already have an account?{' '}
-                <button
-                  type="button"
-                  onClick={() => {
-                    resetForm();
-                    setView('signin');
-                  }}
-                  className="text-blue-600 hover:text-blue-700 font-medium"
-                >
-                  Sign in
-                </button>
-              </p>
-            </form>
-          )}
-
-          {/* Forgot Password Form */}
-          {view === 'forgot-password' && (
-            <form onSubmit={handleForgotPassword} className="space-y-4">
-              <button
-                type="button"
-                onClick={() => {
-                  setError('');
-                  setSuccess('');
-                  setView('signin');
-                }}
-                className="flex items-center gap-1 text-gray-600 hover:text-gray-900 text-sm mb-4"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Back to sign in
-              </button>
-
-              <div>
-                <label htmlFor="reset-email" className="block text-sm font-medium text-gray-700 mb-1">
-                  Email Address
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
                     type="email"
-                    id="reset-email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
                     placeholder="you@example.com"
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    value={signUpEmail}
+                    onChange={(e) => setSignUpEmail(e.target.value)}
+                    required
                   />
                 </div>
-              </div>
 
-              {error && (
-                <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                  {error}
+                <div className="space-y-2">
+                  <Label htmlFor="signup-password">Password</Label>
+                  <div className="relative">
+                    <Input
+                      id="signup-password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      value={signUpPassword}
+                      onChange={(e) => setSignUpPassword(e.target.value)}
+                      required
+                      minLength={8}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    Must be at least 8 characters
+                  </p>
                 </div>
-              )}
 
-              {success && (
-                <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
-                  <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                  {success}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={loading || !!success}
-                className="w-full py-3 bg-gradient-to-r from-blue-600 to-teal-500 text-white font-semibold rounded-xl hover:shadow-lg hover:scale-[1.02] transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Sending...
-                  </>
-                ) : (
-                  'Send Reset Link'
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
                 )}
-              </button>
-            </form>
-          )}
-        </div>
-      </div>
-    </div>
+
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creating account...
+                    </>
+                  ) : (
+                    'Create Account'
+                  )}
+                </Button>
+
+                <p className="text-xs text-center text-slate-500">
+                  By signing up, you agree to our Terms of Service and Privacy Policy
+                </p>
+              </form>
+            </TabsContent>
+          </Tabs>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
