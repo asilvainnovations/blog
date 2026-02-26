@@ -1,120 +1,77 @@
-import React from 'react';
-import { Linkedin, Twitter, Globe, Mail } from 'lucide-react';
-import { Author } from '@/types';
+import { Twitter, Linkedin, Globe } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import type { Author } from '@/types';
 
 interface AuthorCardProps {
   author: Author;
-  variant?: 'compact' | 'full';
-  showBio?: boolean;
-  showSocial?: boolean;
 }
 
-export default function AuthorCard({
-  author,
-  variant = 'compact',
-  showBio = true,
-  showSocial = true,
-}: AuthorCardProps) {
-  const roleColors: Record<string, string> = {
-    admin: 'bg-purple-100 text-purple-700',
-    editor: 'bg-blue-100 text-blue-700',
-    author: 'bg-green-100 text-green-700',
-    contributor: 'bg-gray-100 text-gray-700',
+export function AuthorCard({ author }: AuthorCardProps) {
+  const roleLabels: Record<string, string> = {
+    admin: 'Admin',
+    editor: 'Editor',
+    author: 'Author',
+    contributor: 'Contributor',
   };
 
-  if (variant === 'compact') {
-    return (
-      <div className="flex items-center gap-3">
-        <img
-          src={author.avatar}
-          alt={author.name}
-          className="w-10 h-10 rounded-full object-cover"
-        />
-        <div>
-          <p className="font-medium text-gray-900">{author.name}</p>
-          <p className="text-sm text-gray-500 capitalize">{author.role}</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+    <div className="bg-white rounded-xl shadow-sm p-6">
       <div className="flex items-start gap-4">
         <img
-          src={author.avatar}
+          src={author.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${author.name}`}
           alt={author.name}
-          className="w-16 h-16 rounded-full object-cover flex-shrink-0"
+          className="w-20 h-20 rounded-full object-cover"
         />
-        <div className="flex-1 min-w-0">
+        <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
-            <h3 className="font-bold text-lg text-gray-900">{author.name}</h3>
-            <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${roleColors[author.role]}`}>
-              {author.role}
-            </span>
+            <h3 className="text-lg font-bold text-slate-900">{author.name}</h3>
+            <Badge variant="secondary" className="text-xs">
+              {roleLabels[author.role] || 'Author'}
+            </Badge>
           </div>
           
-          {showBio && author.bio && (
-            <p className="text-gray-600 text-sm mt-2 line-clamp-3">{author.bio}</p>
+          {author.bio && (
+            <p className="text-slate-600 text-sm mb-4 line-clamp-3">{author.bio}</p>
           )}
 
-          {showSocial && (
-            <div className="flex items-center gap-3 mt-4">
-              {author.social_links?.linkedin && (
-                <a
-                  href={author.social_links.linkedin}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-gray-400 hover:text-blue-600 transition-colors"
-                  aria-label="LinkedIn Profile"
-                >
-                  <Linkedin className="w-5 h-5" />
-                </a>
-              )}
-              {author.social_links?.twitter && (
-                <a
-                  href={author.social_links.twitter}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-gray-400 hover:text-blue-400 transition-colors"
-                  aria-label="Twitter Profile"
-                >
-                  <Twitter className="w-5 h-5" />
-                </a>
-              )}
-              {author.social_links?.website && (
-                <a
-                  href={author.social_links.website}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
-                  aria-label="Personal Website"
-                >
-                  <Globe className="w-5 h-5" />
-                </a>
-              )}
+          {/* Social Links */}
+          <div className="flex items-center gap-3">
+            {author.social_links?.twitter && (
               <a
-                href={`mailto:${author.email}`}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-                aria-label="Email Author"
+                href={author.social_links.twitter}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2 rounded-full bg-slate-100 hover:bg-blue-100 hover:text-blue-600 transition-colors"
+                aria-label="Twitter"
               >
-                <Mail className="w-5 h-5" />
+                <Twitter className="h-4 w-4" />
               </a>
-            </div>
-          )}
+            )}
+            {author.social_links?.linkedin && (
+              <a
+                href={author.social_links.linkedin}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2 rounded-full bg-slate-100 hover:bg-blue-100 hover:text-blue-600 transition-colors"
+                aria-label="LinkedIn"
+              >
+                <Linkedin className="h-4 w-4" />
+              </a>
+            )}
+            {author.social_links?.website && (
+              <a
+                href={author.social_links.website}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2 rounded-full bg-slate-100 hover:bg-blue-100 hover:text-blue-600 transition-colors"
+                aria-label="Website"
+              >
+                <Globe className="h-4 w-4" />
+              </a>
+            )}
+          </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-// Author list component for team page
-export function AuthorList({ authors }: { authors: Author[] }) {
-  return (
-    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {authors.map((author) => (
-        <AuthorCard key={author.id} author={author} variant="full" />
-      ))}
     </div>
   );
 }
