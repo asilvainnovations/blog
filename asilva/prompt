@@ -1,4 +1,4 @@
-Develop and design a production-ready Blog platfomr with the following essential features categorized by their role:
+Develop and design a production-ready Blog platform with the following essential features categorized by their role:
 1. Content Management & Writing Experience The "backend" should empower the writer to focus on content without fighting the technology.
 * WYSIWYG / Block Editor: A "What You See Is What You Get" editor (like WordPress Gutenberg) that allows for drag-and-drop layout building.
 * Multimedia Integration: Seamless embedding for high-resolution images, videos (YouTube/Vimeo), and social media posts.
@@ -24,11 +24,8 @@ Develop and design a production-ready Blog platfomr with the following essential
 * Analytics Dashboard: Native tracking of page views, referral sources, and popular content (or easy integration with Google Analytics 4).
 * Security (SSL/HTTPS): An absolute requirement. The platformshould provide an SSL certificate to protect user data and maintain trust.
 
+5. Create an admin dashboard for managing the blog platform. Include features for: 1) Article management (create, edit, delete, schedule publishing), 2) Comment moderation (approve, reject, spam filtering), 3) User management (view users, change roles between admin/editor/author/contributor), 4) Newsletter subscriber management, and 5) Content analytics with detailed metrics. Add role-based access control so only admins and editors can access the dashboard. 4. Here's the Admin email addresses: admin@asilvainnovations.com and alvin.silva@asilvainnovations.com, Editor: alvin.silva@cognitioplus.com
 
-Next Tasks:
+6. Implement a complete article management system for the blog. Add: 1) Auto-save functionality that saves drafts every 30 seconds while editing, 2) Version history showing all previous versions with timestamps and ability to restore any version, 3) Draft preview mode to see how the article will look when published, 4) Scheduled publishing with timezone support allowing authors to set a future publish date/time, 5) A drafts list page showing all unpublished articles with their status, and 6) Publish real-time
 
-Create an admin dashboard for managing the blog platform. Include features for: 1) Article management (create, edit, delete, schedule publishing), 2) Comment moderation (approve, reject, spam filtering), 3) User management (view users, change roles between admin/editor/author/contributor), 4) Newsletter subscriber management, and 5) Content analytics with detailed metrics. Add role-based access control so only admins and editors can access the dashboard.
-
-Implement a complete draft management system for the blog. Add: 1) Auto-save functionality that saves drafts every 30 seconds while editing, 2) Version history showing all previous versions with timestamps and ability to restore any version, 3) Draft preview mode to see how the article will look when published, 4) Scheduled publishing with timezone support allowing authors to set a future publish date/time, and 5) A drafts list page showing all unpublished articles with their status.
-
-Enhance the article search and filtering system with advanced capabilities: 1) Full-text search across article titles, content, and excerpts with highlighted matching terms, 2) Multi-select filtering by multiple categories and tags simultaneously, 3) Date range filtering to find articles from specific time periods, 4) Author filtering to see all articles by a specific writer, 5) Sort options (newest, oldest, most viewed, most commented), and 6) Save search preferences for logged-in users.
+7. Enhance the article search and filtering system with advanced capabilities: 1) Full-text search across article titles, content, and excerpts with highlighted matching terms, 2) Multi-select filtering by multiple categories and tags simultaneously, 3) Date range filtering to find articles from specific time periods, 4) Author filtering to see all articles by a specific writer, 5) Sort options (newest, oldest, most viewed, most commented), and 6) Save search preferences for logged-in users.
